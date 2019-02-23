@@ -15,6 +15,7 @@ Rails.application.routes.draw do
   resources :songs
   get "/spotify", to: "spotify#index"
   get "/spotify/load", to: "spotify#load"
+  post "/spotify/create_playlist", to: "spotify#create_playlist"
   post "/spotify/play", to: "spotify#play"
     
 end
