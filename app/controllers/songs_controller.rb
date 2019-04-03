@@ -10,13 +10,17 @@ class SongsController < ApplicationController
   end
 
   def index
-    @songs = Song.includes([:tags])
+    @songs = Song.where(user: current_user).includes([:tags])
     render :json => @songs.to_json(:include => [:tags])
   end
 
   def update
     newSong =  params[:song]
     song = Song.find(params[:id])
+    if song.user != current_user
+      render status: 401
+      return
+    end
     tags = newSong[:tags].map { |x| Tag.find_or_create_by(name: x) }
     song.tags = tags
     song.save

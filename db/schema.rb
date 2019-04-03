@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_01_19_204145) do
+ActiveRecord::Schema.define(version: 2019_03_19_171442) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -45,6 +45,26 @@ ActiveRecord::Schema.define(version: 2019_01_19_204145) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "task_events", force: :cascade do |t|
+    t.bigint "task_id"
+    t.integer "time"
+    t.boolean "on_time"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id"], name: "index_task_events_on_task_id"
+  end
+
+  create_table "tasks", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "name"
+    t.string "category"
+    t.integer "frequency"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "last_time_done"
+    t.index ["user_id"], name: "index_tasks_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -60,4 +80,6 @@ ActiveRecord::Schema.define(version: 2019_01_19_204145) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "task_events", "tasks"
+  add_foreign_key "tasks", "users"
 end

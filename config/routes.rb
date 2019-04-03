@@ -13,6 +13,10 @@ Rails.application.routes.draw do
   # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 
   resources :songs
+  resources :tasks do
+    resources :task_events, only: [:index, :create]
+  end
+  get "/me", to: "user#me"
   get "/spotify", to: "spotify#index"
   get "/spotify/load", to: "spotify#load"
   post "/spotify/create_playlist", to: "spotify#create_playlist"

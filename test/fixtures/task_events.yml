@@ -1,0 +1,11 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  task: one
+  time: 1
+  on_time: false
+
+two:
+  task: two
+  time: 1
+  on_time: false
