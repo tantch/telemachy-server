@@ -21,5 +21,6 @@ Rails.application.routes.draw do
   get "/spotify/load", to: "spotify#load"
   post "/spotify/create_playlist", to: "spotify#create_playlist"
   post "/spotify/play", to: "spotify#play"
+  get "/spotify/currently_playing",to: "spotify#fetchCurrentlyPlaying"
     
 end

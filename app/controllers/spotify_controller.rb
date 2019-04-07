@@ -134,4 +134,98 @@ class SpotifyController < ApplicationController
         puts data["items"].length
       end while data["next"]
   end
-end
+
+  def self.fetchCurrentlyPlaying
+    uri = URI.parse("https://api.spotify.com/v1/me/player")
+    begin
+      puts uri
+      http = Net::HTTP.new(uri.host,uri.port)
+      http.use_ssl = true
+      request = Net::HTTP::Get.new(uri.request_uri)
+      vaniauser=User.find_by(email:'vanialeite94@gmail.com')
+      puts "token"
+      puts vaniauser.spotify_token
+      request.add_field("Authorization", "Bearer " + vaniauser.spotify_token)
+      begin
+        puts "before response"
+        response = http.request(request)
+      rescue Exception => e
+        puts "An error of type #{ex.class} happened, message is #{ex.message}"
+      end
+      if response.body.present?
+        data = JSON.parse(response.body)
+        puts response.body
+        if data["is_playing"]==true 
+          track= data["item"]
+            playedSong = PlayedSong.new
+            playedSong.user_id=vaniauser.id
+            playedSong.spotify_id=track["id"]
+            playedSong.artist=""
+            track["artists"].each do |i|
+              playedSong.artist.concat(i["name"]).concat(",")
+            end
+            playedSong.name=track["name"]
+            playedSong.popularity=track["popularity"]
+            playedSong.uri=track["uri"]
+            playedSong.album_cover_640=track["album"]["images"][0]["url"]
+            playedSong.album_name=track["album"]["name"]
+            playedSong.save
+            trackFeature=fetchTrackFeatures(playedSong)
+            render json: {song: {currentlyPlaying: playedSong, songFeatures: trackFeature}} and return
+        else
+          render status: 204, json: {
+            message: "The user is in pause mode right now.",
+          }.to_json and return
+          end
+        end
+      else
+        render status: 204, json: {
+          message: "The user is not currenly listening to any music.",
+        }.to_json and return
+      end
+  end
+
+  def self.fetchTrackFeatures (playedSong)
+    uri = URI.parse("https://api.spotify.com/v1/audio-features/#{playedSong.spotify_id}")
+    begin
+      puts uri
+      http = Net::HTTP.new(uri.host,uri.port)
+      http.use_ssl = true
+      request = Net::HTTP::Get.new(uri.request_uri)
+      puts "token"
+      puts User.first.spotify_token
+      request.add_field("Authorization", "Bearer " + User.first.spotify_token)
+      begin
+        puts "before response"
+        response = http.request(request)
+      rescue Exception => e
+        puts "An error of type #{ex.class} happened, message is #{ex.message}"
+      end
+      if response.body.present?
+        track = JSON.parse(response.body)
+        puts track
+            trackFeature = TrackFeature.find_or_create_by({spotify_id: playedSong.spotify_id})
+            trackFeature.spotify_id=track["id"]
+            trackFeature.uri=track["uri"]
+            trackFeature.track_href=track["track_href"]
+            trackFeature.analysis_url=track["analysis_url"]
+            trackFeature.time_signature=track["time_signature"]
+            trackFeature.acousticness=track["acousticness"]
+            trackFeature.danceability=track["danceability"]
+            trackFeature.energy=track["energy"]
+            trackFeature.instrumentalness=track["instrumentalness"]
+            trackFeature.liveness=track["liveness"]
+            trackFeature.loudness=track["loudness"]
+            trackFeature.speechiness=track["speechiness"]
+            trackFeature.speechiness=track["speechiness"]
+            trackFeature.valence=track["valence"]
+            trackFeature.tempo=track["tempo"]
+            trackFeature.played_song_id=playedSong.id
+            trackFeature.save
+            return trackFeature
+        end
+      end
+    end
+  end
+
+

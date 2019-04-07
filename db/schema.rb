@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_03_19_171442) do
+ActiveRecord::Schema.define(version: 2019_04_05_232214) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -18,6 +18,21 @@ ActiveRecord::Schema.define(version: 2019_03_19_171442) do
   create_table "jwt_blacklist", force: :cascade do |t|
     t.string "jti", null: false
     t.index ["jti"], name: "index_jwt_blacklist_on_jti"
+  end
+
+  create_table "played_songs", force: :cascade do |t|
+    t.string "spotify_id"
+    t.string "artist"
+    t.string "name"
+    t.integer "popularity"
+    t.string "uri"
+    t.string "album_cover_64"
+    t.string "album_cover_640"
+    t.string "album_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["user_id"], name: "index_played_songs_on_user_id"
   end
 
   create_table "songs", force: :cascade do |t|
@@ -63,6 +78,27 @@ ActiveRecord::Schema.define(version: 2019_03_19_171442) do
     t.datetime "updated_at", null: false
     t.string "last_time_done"
     t.index ["user_id"], name: "index_tasks_on_user_id"
+  end
+
+  create_table "track_features", force: :cascade do |t|
+    t.string "spotify_id"
+    t.string "uri"
+    t.integer "time_signature"
+    t.float "acousticness"
+    t.float "danceability"
+    t.float "energy"
+    t.float "instrumentalness"
+    t.float "liveness"
+    t.float "loudness"
+    t.float "speechiness"
+    t.float "valence"
+    t.float "tempo"
+    t.string "track_href"
+    t.string "analysis_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "played_song_id"
+    t.index ["played_song_id"], name: "index_track_features_on_played_song_id"
   end
 
   create_table "users", force: :cascade do |t|
