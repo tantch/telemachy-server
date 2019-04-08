@@ -16,7 +16,6 @@ class AddTrackFeature < ActiveRecord::Migration[5.2]
       t.string :track_href
       t.string :analysis_url
       t.timestamps
-      t.references :played_song, foreign_key: true
     end
   end
 end

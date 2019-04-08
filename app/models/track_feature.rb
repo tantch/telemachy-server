@@ -1,4 +1,4 @@
 class TrackFeature < ApplicationRecord
-    has_many :playedsong
-  end
+  has_many :played_song
+end
   

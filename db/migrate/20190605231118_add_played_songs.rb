@@ -10,6 +10,7 @@ class AddPlayedSongs < ActiveRecord::Migration[5.2]
       t.string :album_cover_640
       t.string :album_name
       t.timestamps
+      t.references :track_feature, foreign_key: true
       t.belongs_to :user, index: true
     end
   end
