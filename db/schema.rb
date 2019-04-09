@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_06_05_231120) do
+ActiveRecord::Schema.define(version: 2019_06_05_231121) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -33,6 +33,23 @@ ActiveRecord::Schema.define(version: 2019_06_05_231120) do
     t.index ["jti"], name: "index_jwt_blacklist_on_jti"
   end
 
+  create_table "library_songs", force: :cascade do |t|
+    t.text "color"
+    t.bigint "user_id"
+    t.bigint "song_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["song_id"], name: "index_library_songs_on_song_id"
+    t.index ["user_id"], name: "index_library_songs_on_user_id"
+  end
+
+  create_table "library_songs_tags", id: false, force: :cascade do |t|
+    t.bigint "library_song_id"
+    t.bigint "tag_id"
+    t.index ["library_song_id"], name: "index_library_songs_tags_on_library_song_id"
+    t.index ["tag_id"], name: "index_library_songs_tags_on_tag_id"
+  end
+
   create_table "played_songs", force: :cascade do |t|
     t.string "spotify_id"
     t.string "artist"
@@ -44,10 +61,32 @@ ActiveRecord::Schema.define(version: 2019_06_05_231120) do
     t.string "album_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "track_feature_id"
     t.bigint "user_id"
-    t.index ["track_feature_id"], name: "index_played_songs_on_track_feature_id"
+    t.bigint "songs_id"
+    t.index ["songs_id"], name: "index_played_songs_on_songs_id"
     t.index ["user_id"], name: "index_played_songs_on_user_id"
+  end
+
+  create_table "song_features", force: :cascade do |t|
+    t.string "spotify_id"
+    t.string "uri"
+    t.integer "time_signature"
+    t.float "acousticness"
+    t.float "danceability"
+    t.float "energy"
+    t.float "instrumentalness"
+    t.float "liveness"
+    t.float "loudness"
+    t.float "speechiness"
+    t.float "valence"
+    t.float "tempo"
+    t.string "track_href"
+    t.string "analysis_url"
+    t.integer "popularity"
+    t.datetime "release_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "isSaved"
   end
 
   create_table "songs", force: :cascade do |t|
@@ -55,18 +94,8 @@ ActiveRecord::Schema.define(version: 2019_06_05_231120) do
     t.string "artist"
     t.string "source"
     t.string "code"
-    t.string "color"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id"
-    t.index ["user_id"], name: "index_songs_on_user_id"
-  end
-
-  create_table "songs_tags", id: false, force: :cascade do |t|
-    t.bigint "song_id"
-    t.bigint "tag_id"
-    t.index ["song_id"], name: "index_songs_tags_on_song_id"
-    t.index ["tag_id"], name: "index_songs_tags_on_tag_id"
   end
 
   create_table "tags", force: :cascade do |t|
@@ -95,28 +124,6 @@ ActiveRecord::Schema.define(version: 2019_06_05_231120) do
     t.index ["user_id"], name: "index_tasks_on_user_id"
   end
 
-  create_table "track_features", force: :cascade do |t|
-    t.string "spotify_id"
-    t.string "uri"
-    t.integer "time_signature"
-    t.float "acousticness"
-    t.float "danceability"
-    t.float "energy"
-    t.float "instrumentalness"
-    t.float "liveness"
-    t.float "loudness"
-    t.float "speechiness"
-    t.float "valence"
-    t.float "tempo"
-    t.string "track_href"
-    t.string "analysis_url"
-    t.integer "popularity"
-    t.datetime "release_date"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.boolean "isSaved"
-  end
-
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -133,8 +140,9 @@ ActiveRecord::Schema.define(version: 2019_06_05_231120) do
   end
 
   add_foreign_key "artist_genres", "featured_artists"
-  add_foreign_key "featured_artists", "track_features"
-  add_foreign_key "played_songs", "track_features"
+  add_foreign_key "featured_artists", "song_features", column: "track_feature_id"
+  add_foreign_key "library_songs", "songs"
+  add_foreign_key "library_songs", "users"
   add_foreign_key "task_events", "tasks"
   add_foreign_key "tasks", "users"
 end

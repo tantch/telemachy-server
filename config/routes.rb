@@ -13,6 +13,7 @@ Rails.application.routes.draw do
   # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 
   resources :songs
+  resources :library_songs
   resources :tasks do
     resources :task_events, only: [:index, :create]
   end

@@ -3,7 +3,6 @@ class SongsController < ApplicationController
 
   def create
     @song = Song.new song_params
-    @song.user = current_user
 
     @song.save
     render json: @song
@@ -17,13 +16,7 @@ class SongsController < ApplicationController
   def update
     newSong =  params[:song]
     song = Song.find(params[:id])
-    if song.user != current_user
-      render status: 401
-      return
-    end
-    tags = newSong[:tags].map { |x| Tag.find_or_create_by(name: x) }
-    song.tags = tags
-    song.save
+    song.update(newSong)
 
     render status: 200
 

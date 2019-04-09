@@ -36,17 +36,9 @@ class SpotifyController < ApplicationController
     puts "init spotify play"
     codes = params[:musicCode].map{ |c| "spotify:track:" + c}
     puts codes
-    body = {
-      uris: codes
-    }.to_json
-    uri = URI.parse("https://api.spotify.com/v1/me/player/play")
-    http = Net::HTTP.new(uri.host,uri.port)
-    http.use_ssl = true
-    request = Net::HTTP::Put.new(uri.path)
-    request.body = body;
-    request.add_field("Authorization", "Bearer " + current_user.spotify_token)
-    response = http.request(request)
-    puts response
+
+    SpotifyHelper.play_song(codes, current_user,false)
+
     render status: 200
   end
 
@@ -165,11 +157,11 @@ class SpotifyController < ApplicationController
         data = JSON.parse(response.body)
         data["items"].each do |i|
           song = Song.find_or_create_by({code: i["track"]["id"]})
-          song.user= current_user
           song.name = i["track"]["name"]
           song.artist = i["track"]["album"]["artists"][0]["name"]
           song.source = "spotify"
           song.save
+          song.add_to_user_library(current_user)
         end
         uri = data["next"] ? URI.parse(data["next"]) : ""
         puts data["items"].length
@@ -190,85 +182,85 @@ class SpotifyController < ApplicationController
       begin
         puts "before response"
         response = http.request(request)
-      rescue Exception => e
+      rescue Exception => ex
         puts "An error of type #{ex.class} happened, message is #{ex.message}"
       end
       if response.body.present?
         data = JSON.parse(response.body)
         puts response.body
-        if data["is_playing"]==true 
+        if data["is_playing"] == true 
           track= data["item"]
-            playedSong = PlayedSong.new
-            playedSong.user_id=vaniauser.id
-            playedSong.spotify_id=track["id"]
-            playedSong.artist=""
-            track["artists"].each do |i|
-              playedSong.artist.concat(i["name"]).concat(",")
-            end
-            playedSong.name=track["name"]
-            playedSong.popularity=track["popularity"]
-            playedSong.uri=track["uri"]
-            playedSong.album_cover_640=track["album"]["images"][0]["url"]
-            playedSong.album_name=track["album"]["name"]
-            trackFeature=fetchTrackFeatures(playedSong.spotify_id,false)
-            playedSong.track_feature_id=trackFeature.id
-            playedSong.save
-            
-            render json: {song: {currentlyPlaying: playedSong, songFeatures: trackFeature}} and return
+          playedSong = PlayedSong.new
+          playedSong.user_id=vaniauser.id
+          playedSong.spotify_id=track["id"]
+          playedSong.artist=""
+          track["artists"].each do |i|
+            playedSong.artist.concat(i["name"]).concat(",")
+          end
+          playedSong.name=track["name"]
+          playedSong.popularity=track["popularity"]
+          playedSong.uri=track["uri"]
+          playedSong.album_cover_640=track["album"]["images"][0]["url"]
+          playedSong.album_name=track["album"]["name"]
+          trackFeature=fetchTrackFeatures(playedSong.spotify_id,false)
+          playedSong.track_feature_id=trackFeature.id
+          playedSong.save
+          
+          render json: {song: {currentlyPlaying: playedSong, songFeatures: trackFeature}} and return
         else
           render status: 204, json: {
             message: "The user is in pause mode right now.",
           }.to_json and return
-          end
         end
       else
         render status: 204, json: {
           message: "The user is not currenly listening to any music.",
         }.to_json and return
       end
+    end
   end
 
-  def fetchTrackFeatures (spotifyId,isSaved)
+  def fetchTrackFeatures(spotifyId,isSaved)
     uri = URI.parse("https://api.spotify.com/v1/audio-features/#{spotifyId}")
-    begin
-      if(TrackFeature.exists?(spotify_id: spotifyId))
-        return TrackFeature.find_by({spotify_id: spotifyId})
-      end
-      puts uri
-      response=sendRequest(uri)
-      if response.body.present?
-        track = JSON.parse(response.body)
-        track["error"].nil?
-            trackInfo=fetchTrack(track["id"])
-            trackFeature = TrackFeature.find_or_create_by(spotify_id: track["id"])
-            trackFeature.spotify_id=track["id"]
-            trackFeature.uri=track["uri"]
-            trackFeature.track_href=track["track_href"]
-            trackFeature.analysis_url=track["analysis_url"]
-            trackFeature.time_signature=track["time_signature"]
-            trackFeature.acousticness=track["acousticness"]
-            trackFeature.danceability=track["danceability"]
-            trackFeature.energy=track["energy"]
-            trackFeature.instrumentalness=track["instrumentalness"]
-            trackFeature.liveness=track["liveness"]
-            trackFeature.loudness=track["loudness"]
-            trackFeature.speechiness=track["speechiness"]
-            trackFeature.speechiness=track["speechiness"]
-            trackFeature.valence=track["valence"]
-            trackFeature.tempo=track["tempo"]
-            trackFeature.isSaved=isSaved
-            trackFeature.release_date=trackInfo["album"]["release_date"]
-            trackFeature.popularity=trackInfo["popularity"]
-            trackFeature.save
-            saveTrackArtistsAndGenres(trackInfo,trackFeature.id)
-            return TrackFeature
-            .Joins(:feautured_artists).where(feautured_artists: {artist.track_feature_id:spotifyId})
-            .Joins(:artist_genres).where(artist_genres: {artist_genre.featured_artist_id:artist.artist_code})
+    #begin
+    #  if(TrackFeature.exists?(spotify_id: spotifyId))
+    #    return TrackFeature.find_by({spotify_id: spotifyId})
+    #  end
+    #  puts uri
+    #  response=sendRequest(uri)
+    #  if response.body.present?
+    #    track = JSON.parse(response.body)
+    #    track["error"].nil?
+    #        trackInfo=fetchTrack(track["id"])
+    #        trackFeature = TrackFeature.find_or_create_by(spotify_id: track["id"])
+    #        trackFeature.spotify_id=track["id"]
+    #        trackFeature.uri=track["uri"]
+    #        trackFeature.track_href=track["track_href"]
+    #        trackFeature.analysis_url=track["analysis_url"]
+    #        trackFeature.time_signature=track["time_signature"]
+    #        trackFeature.acousticness=track["acousticness"]
+    #        trackFeature.danceability=track["danceability"]
+    #        trackFeature.energy=track["energy"]
+    #        trackFeature.instrumentalness=track["instrumentalness"]
+    #        trackFeature.liveness=track["liveness"]
+    #        trackFeature.loudness=track["loudness"]
+    #        trackFeature.speechiness=track["speechiness"]
+    #        trackFeature.speechiness=track["speechiness"]
+    #        trackFeature.valence=track["valence"]
+    #        trackFeature.tempo=track["tempo"]
+    #        trackFeature.isSaved=isSaved
+    #        trackFeature.release_date=trackInfo["album"]["release_date"]
+    #        trackFeature.popularity=trackInfo["popularity"]
+    #        trackFeature.save
+    #        saveTrackArtistsAndGenres(trackInfo,trackFeature.id)
+    #        return TrackFeature
+    #        .Joins(:feautured_artists).where(feautured_artists: {artist.track_feature_id: spotifyId})
+    #        .Joins(:artist_genres).where(artist_genres: {artist_genre.featured_artist_id: artist.artist_code})
 
-             TrackFeature.includes()
-        end
-      end
-    end
+    #         TrackFeature.includes()
+    #    end
+    #  end
+    #end
   end
 
   def sendRequest(uri)
@@ -319,6 +311,5 @@ class SpotifyController < ApplicationController
       end
     end
   end
-  
 
-
+end
