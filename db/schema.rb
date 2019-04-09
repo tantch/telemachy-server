@@ -10,10 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_06_05_231118) do
+ActiveRecord::Schema.define(version: 2019_06_05_231120) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "artist_genres", force: :cascade do |t|
+    t.string "name"
+    t.bigint "featured_artist_id"
+    t.index ["featured_artist_id"], name: "index_artist_genres_on_featured_artist_id"
+  end
+
+  create_table "featured_artists", force: :cascade do |t|
+    t.string "name"
+    t.string "artist_code"
+    t.bigint "track_feature_id"
+    t.index ["track_feature_id"], name: "index_featured_artists_on_track_feature_id"
+  end
 
   create_table "jwt_blacklist", force: :cascade do |t|
     t.string "jti", null: false
@@ -97,6 +110,8 @@ ActiveRecord::Schema.define(version: 2019_06_05_231118) do
     t.float "tempo"
     t.string "track_href"
     t.string "analysis_url"
+    t.integer "popularity"
+    t.datetime "release_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "isSaved"
@@ -117,6 +132,8 @@ ActiveRecord::Schema.define(version: 2019_06_05_231118) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "artist_genres", "featured_artists"
+  add_foreign_key "featured_artists", "track_features"
   add_foreign_key "played_songs", "track_features"
   add_foreign_key "task_events", "tasks"
   add_foreign_key "tasks", "users"

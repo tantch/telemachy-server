@@ -95,7 +95,6 @@ class SpotifyController < ApplicationController
     response = http.request(request)
     puts response.inspect
     puts response.body
-
   end
 
   def create_playlist
@@ -232,24 +231,16 @@ class SpotifyController < ApplicationController
   def fetchTrackFeatures (spotifyId,isSaved)
     uri = URI.parse("https://api.spotify.com/v1/audio-features/#{spotifyId}")
     begin
-      TrackFeature.exists?({spotify_id: spotifyId})
+      if(TrackFeature.exists?(spotify_id: spotifyId))
         return TrackFeature.find_by({spotify_id: spotifyId})
-      puts uri
-      http = Net::HTTP.new(uri.host,uri.port)
-      http.use_ssl = true
-      request = Net::HTTP::Get.new(uri.request_uri)
-      puts "token"
-      puts User.first.spotify_token
-      request.add_field("Authorization", "Bearer " + User.first.spotify_token)
-      begin
-        puts "before response"
-        response = http.request(request)
-      rescue Exception => e
-        puts "An error of type #{ex.class} happened, message is #{ex.message}"
       end
+      puts uri
+      response=sendRequest(uri)
       if response.body.present?
         track = JSON.parse(response.body)
         track["error"].nil?
+            trackInfo=fetchTrack(track["id"])
+            trackFeature = TrackFeature.find_or_create_by(spotify_id: track["id"])
             trackFeature.spotify_id=track["id"]
             trackFeature.uri=track["uri"]
             trackFeature.track_href=track["track_href"]
@@ -266,11 +257,68 @@ class SpotifyController < ApplicationController
             trackFeature.valence=track["valence"]
             trackFeature.tempo=track["tempo"]
             trackFeature.isSaved=isSaved
+            trackFeature.release_date=trackInfo["album"]["release_date"]
+            trackFeature.popularity=trackInfo["popularity"]
             trackFeature.save
-            return trackFeature
+            saveTrackArtistsAndGenres(trackInfo,trackFeature.id)
+            return TrackFeature
+            .Joins(:feautured_artists).where(feautured_artists: {artist.track_feature_id:spotifyId})
+            .Joins(:artist_genres).where(artist_genres: {artist_genre.featured_artist_id:artist.artist_code})
+
+             TrackFeature.includes()
         end
       end
     end
   end
+
+  def sendRequest(uri)
+    puts uri
+    http = Net::HTTP.new(uri.host,uri.port)
+    http.use_ssl = true
+    request = Net::HTTP::Get.new(uri.request_uri)
+    puts "token"
+    puts User.first.spotify_token
+    request.add_field("Authorization", "Bearer " + User.first.spotify_token)
+    begin
+      puts "before response"
+      response = http.request(request)
+    rescue Exception => e
+      puts "An error of type #{e.class} happened, message is #{e.message}"
+    end
+    return response
+  end
+    
+
+  def fetchTrack(spotify_id)
+    uri = URI.parse("https://api.spotify.com/v1/tracks/#{spotify_id}")
+    response=sendRequest(uri)
+    if response.body.present?
+      track = JSON.parse(response.body)
+      return track
+    end
+  end
+
+  def saveTrackArtistsAndGenres(track,feature_song_id)
+    track["artists"].each do |artist|
+      uri = URI.parse("https://api.spotify.com/v1/artists/#{artist["id"]}")
+      response=sendRequest(uri)
+      puts artist
+      if response.body.present?
+        artist = JSON.parse(response.body)
+        featuredArtist=FeaturedArtist.new
+        featuredArtist.name=artist["name"]
+        featuredArtist.artist_code=artist["id"]
+        featuredArtist.track_feature_id=feature_song_id
+        featuredArtist.save
+        artist["genres"].each do |genre|
+          artistGenre = ArtistGenre.new
+          artistGenre.name=genre
+          artistGenre.featured_artist_id=featuredArtist.id
+          artistGenre.save
+        end
+      end
+    end
+  end
+  
 
 

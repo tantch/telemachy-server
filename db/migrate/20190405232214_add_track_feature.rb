@@ -15,6 +15,8 @@ class AddTrackFeature < ActiveRecord::Migration[5.2]
       t.float :tempo
       t.string :track_href
       t.string :analysis_url
+      t.integer :popularity
+      t.datetime :release_date
       t.timestamps
     end
   end
