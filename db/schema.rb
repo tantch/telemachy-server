@@ -24,8 +24,8 @@ ActiveRecord::Schema.define(version: 2019_06_05_231121) do
   create_table "featured_artists", force: :cascade do |t|
     t.string "name"
     t.string "artist_code"
-    t.bigint "track_feature_id"
-    t.index ["track_feature_id"], name: "index_featured_artists_on_track_feature_id"
+    t.bigint "song_feature_id"
+    t.index ["song_feature_id"], name: "index_featured_artists_on_song_feature_id"
   end
 
   create_table "jwt_blacklist", force: :cascade do |t|
@@ -140,7 +140,7 @@ ActiveRecord::Schema.define(version: 2019_06_05_231121) do
   end
 
   add_foreign_key "artist_genres", "featured_artists"
-  add_foreign_key "featured_artists", "song_features", column: "track_feature_id"
+  add_foreign_key "featured_artists", "song_features"
   add_foreign_key "library_songs", "songs"
   add_foreign_key "library_songs", "users"
   add_foreign_key "task_events", "tasks"
