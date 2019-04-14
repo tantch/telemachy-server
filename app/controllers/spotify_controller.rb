@@ -209,8 +209,9 @@ class SpotifyController < ApplicationController
           songfeature = saveSongFeatures(playedSong.spotify_id, false)
 
 
-
-          render(json: { song: { currentlyPlaying: playedSong, songFeatures: songfeature } }) && return
+          result={ song: { currentlyPlaying: playedSong, songFeatures: songfeature } }
+          puts songfeature
+          render(json: result) && return
         else
           render(status: 204, json: {
             message: 'The user is in pause mode right now.'
@@ -236,10 +237,8 @@ class SpotifyController < ApplicationController
     response = sendRequest(uri)
     if response.body.present?
       track = JSON.parse(response.body)
-      puts track
       track['error'].nil?
       begin
-
         songFeature.spotify_id = track['id']
         songFeature.uri = track['uri']
         songFeature.track_href = track['track_href']
@@ -286,10 +285,8 @@ end
     http.use_ssl = true
     request = Net::HTTP::Get.new(uri.request_uri)
     puts 'token'
-    puts User.first.spotify_token
     request.add_field('Authorization', 'Bearer ' + User.first.spotify_token)
     begin
-      puts 'before response'
       response = http.request(request)
     rescue Exception => e
       puts "An error of type #{e.class} happened, message is #{e.message}"
@@ -302,30 +299,34 @@ end
     response = sendRequest(uri)
     if response.body.present?
       track = JSON.parse(response.body)
-      puts track
       return track
     end
   end
 
   def saveTrackArtistsAndGenres(track, feature_song_id)
     track['artists'].each do |artist|
-      uri = URI.parse("https://api.spotify.com/v1/artists/#{artist['id']}")
-      response = sendRequest(uri)
-      puts artist
-      if response.body.present?
-        artist = JSON.parse(response.body)
-        puts artist
-        featuredArtist = FeaturedArtist.new
-        featuredArtist.name = artist['name']
-        featuredArtist.artist_code = artist['id']
-        featuredArtist.song_feature_id = feature_song_id
-        featuredArtist.save
-        artist['genres'].each do |genre|
-          artistGenre = ArtistGenre.new
-          artistGenre.name = genre
-          artistGenre.featured_artist_id = featuredArtist.id
-          artistGenre.save
-        end
+      saveFeaturedArtist(artist, feature_song_id)
+    end
+  end
+
+  private
+
+  def saveFeaturedArtist(artist, feature_song_id)
+    uri = URI.parse("https://api.spotify.com/v1/artists/#{artist['id']}")
+    response = sendRequest(uri)
+    if response.body.present?
+      artist = JSON.parse(response.body)
+      featuredArtist = FeaturedArtist.new
+      featuredArtist.name = artist['name']
+      featuredArtist.artist_code = artist['id']
+      featuredArtist.song_feature_id = feature_song_id
+      featuredArtist.save
+      artist['genres'].each do |genre|
+        artistGenre = ArtistGenre.new
+        artistGenre.name = genre
+        artistGenre.featured_artist_id = featuredArtist.id
+        artistGenre.save
+        return true
       end
     end
   end
