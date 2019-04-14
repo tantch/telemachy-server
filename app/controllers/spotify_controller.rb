@@ -202,7 +202,7 @@ class SpotifyController < ApplicationController
             song.source='spotify'
             song.save
           end
-          song = Song.find_by(code:playedSong.spotify_id).id
+          song = Song.find_by(code:playedSong.spotify_id)
           playedSong.songs_id = song.id
           playedSong.save
 
@@ -231,15 +231,15 @@ class SpotifyController < ApplicationController
     if SongFeature.exists?(spotify_id: spotifyId)
       return SongFeature.find_by(spotify_id: spotifyId)
     end
-
+    songFeature = SongFeature.find_or_create_by(spotify_id: spotifyId)
+    trackInfo = fetchTrack(spotifyId)
     response = sendRequest(uri)
     if response.body.present?
       track = JSON.parse(response.body)
       puts track
       track['error'].nil?
       begin
-        trackInfo = fetchTrack(track['id'])
-        songFeature = SongFeature.find_or_create_by(spotify_id: track['id'])
+
         songFeature.spotify_id = track['id']
         songFeature.uri = track['uri']
         songFeature.track_href = track['track_href']
@@ -258,19 +258,27 @@ class SpotifyController < ApplicationController
         songFeature.release_date = trackInfo['album']['release_date']
         songFeature.popularity = trackInfo['popularity']
         songFeature.save
-      rescue Exception => ex
-        puts "An error of type #{e.class} happened, message is #{e.message}"
+      rescue StandardError => error
+        puts "An error of type has ocorred!!!!!!!!!!!!!!!"
+        notify_airbrake(error)
       end
 
       unless songFeature.id.nil?
         saveTrackArtistsAndGenres(trackInfo, songFeature.id)
-        return SongFeature
-                   .joins(featured_artists: :artist_genres)
-                   .select('song_features.*,featured_artists.*,artist_genres.*')
-                   .where(spotify_id: songFeature.spotify_id)
+        joinedSongFeature= SongFeature
+                               .joins(featured_artists: :artist_genres)
+                               .select('featured_artists.name AS Artist,artist_genres.name AS Genre, song_features.*')
+                               .where(spotify_id: songFeature.spotify_id)
+        genres = extractArtistGenres(joinedSongFeature)
+        puts genres
+        return joinedSongFeature
       end
     end
   end
+
+  def extractArtistGenres(joinedSongFeature)
+    return joinedSongFeature.map{|s| s.genre}
+end
 
   def sendRequest(uri)
     puts uri
