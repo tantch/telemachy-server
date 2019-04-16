@@ -10,23 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_06_05_231121) do
+ActiveRecord::Schema.define(version: 2019_06_05_231119) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
-
-  create_table "artist_genres", force: :cascade do |t|
-    t.string "name"
-    t.bigint "featured_artist_id"
-    t.index ["featured_artist_id"], name: "index_artist_genres_on_featured_artist_id"
-  end
-
-  create_table "featured_artists", force: :cascade do |t|
-    t.string "name"
-    t.string "artist_code"
-    t.bigint "song_feature_id"
-    t.index ["song_feature_id"], name: "index_featured_artists_on_song_feature_id"
-  end
 
   create_table "jwt_blacklist", force: :cascade do |t|
     t.string "jti", null: false
@@ -139,8 +126,6 @@ ActiveRecord::Schema.define(version: 2019_06_05_231121) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
-  add_foreign_key "artist_genres", "featured_artists"
-  add_foreign_key "featured_artists", "song_features"
   add_foreign_key "library_songs", "songs"
   add_foreign_key "library_songs", "users"
   add_foreign_key "task_events", "tasks"
