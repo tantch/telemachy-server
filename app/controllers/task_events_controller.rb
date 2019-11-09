@@ -8,7 +8,7 @@ class TaskEventsController < ApplicationController
     render json: @task_event
   end
   def index
-    @task_events = TaskEvent.all
+    @task_events = TaskEvent.where(task_id: params[:task_id]).all
     render :json => @task_events
   end
 

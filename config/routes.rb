@@ -19,6 +19,7 @@ Rails.application.routes.draw do
   end
   get "/me", to: "user#me"
   get "/spotify", to: "spotify#index"
+  get "/spotify/playlists", to: "spotify#userPlaylists"
   get "/spotify/load", to: "spotify#load"
   post "/spotify/create_playlist", to: "spotify#create_playlist"
   post "/spotify/create_dancing_playlist", to: "spotify#create_dancing_playlist"

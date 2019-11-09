@@ -2,25 +2,6 @@ require "base64"
 
 class SpotifyHelper
 
-  def self.play_song(codes, user, force_stop= false)
-
-    body = {
-      uris: codes
-    }.to_json
-    uri = URI.parse("https://api.spotify.com/v1/me/player/play")
-    http = Net::HTTP.new(uri.host,uri.port)
-    http.use_ssl = true
-    request = Net::HTTP::Put.new(uri.path)
-    request.body = body;
-    request.add_field("Authorization", "Bearer " + user.spotify_token)
-    response = http.request(request)
-    if response.code == "401" && !force_stop
-      self.refresh_spotify_token(user)
-      self.play_song(codes, user,true)
-    end
-
-  end
-
   def self.refresh_spotify_token(user)
     
     body = {
@@ -71,36 +52,92 @@ class SpotifyHelper
 
   end
 
+  def self.play_song(codes, user, force_stop= false)
 
-  def self.load_user_spotify_library(user, force_stop=false)
+    body = {
+      uris: codes
+    }.to_json
+    puts "play song for urls: #{codes}"
+    uri = URI.parse("https://api.spotify.com/v1/me/player/play")
+    http = Net::HTTP.new(uri.host,uri.port)
+    http.use_ssl = true
+    request = Net::HTTP::Put.new(uri.path)
+    request.body = body;
+    request.add_field("Authorization", "Bearer " + user.spotify_token)
+    response = http.request(request)
+    if response.code == "401" && !force_stop
+      self.refresh_spotify_token(user)
+      self.play_song(codes, user,true)
+    end
+
+  end
+
+
+  def self.get_user_spotify_library(user,force_stop=false)
 
     uri = URI.parse('https://api.spotify.com/v1/me/tracks')
+    
+    song_data_list = []
+
     begin
       puts uri
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
       request = Net::HTTP::Get.new(uri.request_uri)
       request.add_field('Authorization', 'Bearer ' + user.spotify_token)
-      puts 'before response'
       response = http.request(request)
-      puts response
+
       if response.code == "401" && !force_stop
+        puts "refresh token and retry"
         self.refresh_spotify_token(user)
-        self.load_user_spotify_library(user,true)
-        return
+        return self.get_user_spotify_library(user,true)
       end
+
       data = JSON.parse(response.body)
       data['items'].each do |i|
-        song = Song.find_or_create_by(code: i['track']['id'])
-        song.name = i['track']['name']
-        song.artist = i['track']['album']['artists'][0]['name']
-        song.source = 'spotify'
-        song.save
-        song.add_to_user_library(user)
+        song = {}
+        song["code"] = i['track']['id']
+        song["name"] = i['track']['name']
+        song["artist"] = i['track']['album']['artists'][0]['name']
+        song["source"] = 'spotify'
+        song_data_list.push(song)
       end
       uri = data['next'] ? URI.parse(data['next']) : ''
       puts data['items'].length
     end while data['next']
+
+    return song_data_list
+
+  end
+
+  def self.get_user_playlists(user,force_stop=false)
+    uri = URI.parse('https://api.spotify.com/v1/me/playlists')
+
+
+    playlists = []
+    data = {}
+    begin
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      request = Net::HTTP::Get.new(uri.request_uri)
+      request.add_field('Authorization', 'Bearer ' + user.spotify_token)
+      response = http.request(request)
+
+      if response.code == "401" && !force_stop
+        puts "refresh token and retry"
+        self.refresh_spotify_token(user)
+        return self.get_user_playlists(user,true)
+      end
+
+      data = JSON.parse(response.body)
+      playlists.concat data['items']
+      uri = data['next'] ? URI.parse(data['next']) : ''
+    end while data['next']
+    s_user_id = data["href"].split("/")[5]
+    puts playlists.length
+    playlists = playlists.select{ |item| item["owner"]["id"] == s_user_id }
+    puts playlists.length
+    return playlists
 
   end
 

@@ -22,7 +22,8 @@ class TasksController < ApplicationController
       render status: 401
       return
     end
-    task.name = newTask.name
+    task.name = newTask["name"]
+    task.last_time_done = newTask["last_time_done"]
     task.save
 
     render status: 200
