@@ -13,6 +13,7 @@ Rails.application.routes.draw do
   # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 
   resources :songs
+  resources :albums
   resources :library_songs
   resources :tasks do
     resources :task_events, only: [:index, :create]
@@ -25,5 +26,6 @@ Rails.application.routes.draw do
   post "/spotify/create_dancing_playlist", to: "spotify#create_dancing_playlist"
   post "/spotify/play", to: "spotify#play"
   get "/spotify/currently_playing",to: "spotify#fetchCurrentlyPlaying"
+  post "/spotify/battle",to: "spotify#battle"
     
 end

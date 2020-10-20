@@ -75,9 +75,8 @@ class SpotifyHelper
 
   def self.get_user_spotify_library(user,force_stop=false)
 
-    uri = URI.parse('https://api.spotify.com/v1/me/tracks')
-    
-    song_data_list = []
+    uri = URI.parse('https://api.spotify.com/v1/me/albums')
+    albums = []
 
     begin
       puts uri
@@ -93,20 +92,22 @@ class SpotifyHelper
         return self.get_user_spotify_library(user,true)
       end
 
-      data = JSON.parse(response.body)
-      data['items'].each do |i|
-        song = {}
-        song["code"] = i['track']['id']
-        song["name"] = i['track']['name']
-        song["artist"] = i['track']['album']['artists'][0]['name']
-        song["source"] = 'spotify'
-        song_data_list.push(song)
+      if response.code == "200" 
+        data = JSON.parse(response.body)
+        data['items'].each do |i|
+          album = { name: i["album"]["name"], songs: [] }
+          puts i["album"]["tracks"]["items"].length
+          i["album"]["tracks"]["items"].each do |j|
+            album[:songs].push({name: j["name"], source: {name: "spotify", code: j["uri"]}})
+          end
+          albums.push(album)
+        end
+        uri = data['next'] ? URI.parse(data['next']) : ''
+        puts data['items'].length
       end
-      uri = data['next'] ? URI.parse(data['next']) : ''
-      puts data['items'].length
-    end while data['next']
 
-    return song_data_list
+    end while data['next']
+    return albums
 
   end
 
@@ -138,6 +139,58 @@ class SpotifyHelper
     playlists = playlists.select{ |item| item["owner"]["id"] == s_user_id }
     puts playlists.length
     return playlists
+
+  end
+
+  def self.get_artist_songs(user,artist_id,force_stop=false)
+    uri = URI.parse("https://api.spotify.com/v1/artists/#{artist_id}/albums?include_groups=album")
+
+
+    songs = []
+    data = {}
+    begin
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      request = Net::HTTP::Get.new(uri.request_uri)
+      request.add_field('Authorization', 'Bearer ' + user.spotify_token)
+      response = http.request(request)
+
+      if response.code == "401" && !force_stop
+        puts "refresh token and retry"
+        self.refresh_spotify_token(user)
+        return self.get_artist_songs(artist_id,true)
+      end
+
+      data = JSON.parse(response.body)
+      albums = data['items'].map{ |album| album['id'] }
+      uri = data['next'] ? URI.parse(data['next']) : ''
+    end while data['next']
+    
+    albums.each do |album|
+      uri = URI.parse("https://api.spotify.com/v1/albums/#{album}/tracks")
+      tracks= []
+      data = {}
+      begin
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        request = Net::HTTP::Get.new(uri.request_uri)
+        request.add_field('Authorization', 'Bearer ' + user.spotify_token)
+        response = http.request(request)
+
+        if response.code == "401" && !force_stop
+          puts "refresh token and retry"
+          self.refresh_spotify_token(user)
+          return self.get_artist_songs(artist_id,true)
+        end
+
+        data = JSON.parse(response.body)
+        tracks = data['items'].map{ |song| song['uri'] }
+        songs.concat tracks
+        uri = data['next'] ? URI.parse(data['next']) : ''
+      end while data['next']
+
+    end
+    return songs
 
   end
 

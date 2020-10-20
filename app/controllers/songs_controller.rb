@@ -9,7 +9,8 @@ class SongsController < ApplicationController
   end
 
   def index
-    @songs = Song.where(user: current_user).includes([:tags])
+
+    @songs = Song.where(user_id: current_user.id).includes([:tags])
     render :json => @songs.to_json(:include => [:tags])
   end
 
@@ -25,7 +26,7 @@ class SongsController < ApplicationController
   private
 
     def song_params
-      params.require(:song).permit(:artist,:source,:code, :name)
+      params.require(:song).permit(:album_id,:name,:color)
     end
 
 end

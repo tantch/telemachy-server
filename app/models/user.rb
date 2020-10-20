@@ -4,7 +4,6 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :jwt_authenticatable,
          jwt_revocation_strategy: JWTBlacklist
-  has_many :library_songs
-  has_many :played_songs
-  has_many :tasks
+  has_many :songs
+  has_many :albums
 end
